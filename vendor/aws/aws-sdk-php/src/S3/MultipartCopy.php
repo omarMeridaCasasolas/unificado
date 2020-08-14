@@ -1,5 +1,4 @@
 <?php
-
 namespace Aws\S3;
 
 use Aws\Arn\ArnParser;
@@ -52,9 +51,9 @@ class MultipartCopy extends AbstractUploadManager
      *   result of executing a HeadObject command on the copy source.
      *
      * @param S3ClientInterface $client Client used for the upload.
-     * @param string $source Location of the data to be copied
+     * @param string            $source Location of the data to be copied
      *                                  (in the form /<bucket>/<key>).
-     * @param array $config Configuration used to perform the upload.
+     * @param array             $config Configuration used to perform the upload.
      */
     public function __construct(
         S3ClientInterface $client,
@@ -67,10 +66,9 @@ class MultipartCopy extends AbstractUploadManager
             $this->source = "/";
         }
         $this->source .= ltrim($source, '/');
-        parent::__construct(
-            $client,
-            array_change_key_case($config) + ['source_metadata' => null]
-        );
+        parent::__construct($client, array_change_key_case($config) + [
+            'source_metadata' => null
+        ]);
     }
 
     /**
@@ -88,12 +86,12 @@ class MultipartCopy extends AbstractUploadManager
         return [
             'command' => [
                 'initiate' => 'CreateMultipartUpload',
-                'upload' => 'UploadPartCopy',
+                'upload'   => 'UploadPartCopy',
                 'complete' => 'CompleteMultipartUpload',
             ],
             'id' => [
-                'bucket' => 'Bucket',
-                'key' => 'Key',
+                'bucket'    => 'Bucket',
+                'key'       => 'Key',
                 'upload_id' => 'UploadId',
             ],
             'part_num' => 'PartNumber',
@@ -109,7 +107,8 @@ class MultipartCopy extends AbstractUploadManager
             if (!$this->state->hasPartBeenUploaded($partNumber)) {
                 $command = $this->client->getCommand(
                     $this->info['command']['upload'],
-                    $this->createPart($partNumber, $parts) + $this->getState()->getId()
+                    $this->createPart($partNumber, $parts)
+                        + $this->getState()->getId()
                 );
                 $command->getHandlerList()->appendSign($resultHandler, 'mup');
                 yield $command;
@@ -128,13 +127,7 @@ class MultipartCopy extends AbstractUploadManager
             $data[$k] = $v;
         }
 
-        list($bucket, $key) = explode('/', ltrim($this->source, '/'), 2);
-        $data['CopySource'] = '/' . $bucket . '/' . rawurlencode(
-                implode(
-                    '/',
-                    array_map('urlencode', explode('/', $key))
-                )
-            );
+        $data['CopySource'] = $this->source;
         $data['PartNumber'] = $partNumber;
 
         $defaultPartSize = $this->determinePartSize();
